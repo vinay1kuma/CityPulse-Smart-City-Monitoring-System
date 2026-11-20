@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CityPulse - Smart City Monitoring</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">CP</div>
+    <div><h1>CityPulse</h1><div class="sub">Real-time smart city platform: Edge &rarr; Fog &rarr; Cloud (simulated sensors)</div></div>
+  </div>
+  <nav id="nav">
+    <button data-page="overview" class="active">Overview</button>
+    <button data-page="analytics">Analytics</button>
+    <button data-page="map">City Map</button>
+    <button data-page="rules">Alerts &amp; Rules</button>
+    <button data-page="ops">Operations</button>
+  </nav>
+  <div class="right">
+    <div class="live"><span class="dot" id="wsdot"></span><span id="wstext">Connecting...</span></div>
+    <div id="clock"></div>
+    <div class="admin-session"><span id="admin-user">admin</span><button id="logout-btn" class="logout-btn" type="button">Log out</button></div>
+  </div>
+</header>
+<div id="banner"></div>
+
+<main>
+  <!-- ================= OVERVIEW ================= -->
+  <section class="page active" id="page-overview">
+    <div class="zones" id="zones"></div>
+    <div class="grid2">
+      <div class="card">
+        <h2>Live trend with 30-second forecast</h2>
+        <div class="tabs" id="tabs"></div>
+        <div class="legend" id="legend"></div>
+        <canvas id="chart" class="bigchart"></canvas>
+      </div>
+      <div class="card">
+        <h2>Alert feed <span class="aside" id="alertcount"></span></h2>
+        <ul class="feed" id="alerts"><li class="empty">No alerts yet. City is calm.</li></ul>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="card">
+        <h2>Inject incident (demo)</h2>
+        <label for="fzone">Zone</label><select id="fzone"></select>
+        <label for="fmetric">Sensor type</label><select id="fmetric"></select>
+        <button class="fault" id="btnSudden">Sudden emergency (20 s)</button>
+        <button class="fault slow" id="btnGradual">Developing incident (70 s)</button>
+        <div class="hint">Sudden: the fog node flags it within seconds. Developing: values drift upwards slowly, and the predictor raises an <b>early warning before the limit is crossed</b>.</div>
+      </div>
+      <div class="card">
+        <h2>Forecast: next 30 seconds</h2>
+        <div class="wrap"><table id="fctable"></table></div>
+        <div class="hint">Linear trend fitted by the predictor service on the last ~20 s of fog-aggregated data. Highlighted cells are predicted to cross the warning limit.</div>
+      </div>
+      <div class="card">
+        <h2>System health</h2>
+        <div class="kpis">
+          <div class="kpi"><b id="kraw">0</b><span>raw sensor msgs/s (MQTT)</span></div>
+          <div class="kpi"><b id="kagg">0</b><span>to cloud msgs/s (Kafka)</span></div>
+          <div class="kpi"><b id="kred">0%</b><span>data reduced at the fog</span></div>
+          <div class="kpi"><b id="kalerts">0</b><span>alerts / <span id="knotif">0</span> notifications</span></div>
+        </div>
+        <div id="fogstatus"></div>
+        <div class="row"><span>Cloud processors</span><b id="procs">-</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ANALYTICS ================= -->
+  <section class="page" id="page-analytics">
+    <div class="card">
+      <h2>Historical analytics (from PostgreSQL)</h2>
+      <div class="controls">
+        <div><label for="a-metric">Sensor type</label><select id="a-metric"></select></div>
+        <div><label for="a-range">Time range</label>
+          <select id="a-range">
+            <option value="15">Last 15 minutes</option>
+            <option value="60" selected>Last 1 hour</option>
+            <option value="360">Last 6 hours</option>
+            <option value="1440">Last 24 hours</option>
+          </select></div>
+        <div><label for="a-band">Min/max band for</label><select id="a-band"></select></div>
+        <div class="btns">
+          <a class="btn" id="a-csv" href="#" download>Download CSV (this sensor)</a>
+          <a class="btn alt" id="a-csv-all" href="#" download>Download CSV (all sensors)</a>
+        </div>
+      </div>
+      <div class="legend" id="a-legend"></div>
+      <canvas id="achart" class="bigchart"></canvas>
+      <div class="hint" id="a-note"></div>
+    </div>
+    <div class="grid2b">
+      <div class="card"><h2>Zone comparison for the selected sensor</h2><div class="wrap"><table id="a-table"></table></div></div>
+      <div class="card"><h2>City heatmap: average value per zone and sensor</h2><div class="wrap"><table id="a-heat"></table></div>
+        <div class="hint">Colour shows the share of time spent in warning or critical state in the selected range.</div></div>
+    </div>
+  </section>
+
+  <!-- ================= MAP ================= -->
+  <section class="page" id="page-map">
+    <div class="mapgrid">
+      <div class="card">
+        <h2>City map <span class="aside" id="healthscore"></span></h2>
+        <svg id="mapsvg" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="legend maplegend">
+          <span><i style="background:#34d399"></i>Normal</span><span><i style="background:#fbbf24"></i>Warning</span>
+          <span><i style="background:#f87171"></i>Critical</span><span class="muted">Schematic view (not to scale). Click a zone for details.</span>
+        </div>
+      </div>
+      <div class="card" id="zonedetail"></div>
+    </div>
+  </section>
+
+  <!-- ================= ALERTS & RULES ================= -->
+  <section class="page" id="page-rules">
+    <div class="grid2b">
+      <div class="card">
+        <h2>Create alert rule</h2>
+        <div class="formgrid">
+          <div class="span2"><label for="r-name">Rule name</label><input id="r-name" maxlength="60" placeholder="e.g. Hot afternoon in NIT zone"></div>
+          <div><label for="r-zone">Zone</label><select id="r-zone"></select></div>
+          <div><label for="r-metric">Sensor type</label><select id="r-metric"></select></div>
+          <div><label for="r-op">Condition</label><select id="r-op"><option value="&gt;">is above</option><option value="&lt;">is below</option></select></div>
+          <div><label for="r-thr">Threshold</label><input id="r-thr" type="number" step="any" placeholder="36"></div>
+          <div><label for="r-sev">Severity</label><select id="r-sev"><option value="warning">Warning</option><option value="critical">Critical</option></select></div>
+          <div><label>Notify via</label>
+            <div class="checks"><label><input type="checkbox" id="r-email" checked> Email</label>
+            <label><input type="checkbox" id="r-sms"> SMS</label>
+            <label><input type="checkbox" id="r-tg"> Telegram</label></div></div>
+        </div>
+        <button class="primary" id="r-add">Add rule</button>
+        <div class="formmsg" id="r-msg"></div>
+        <div class="hint">Rules are stored in MongoDB and evaluated by the cloud processors on every aggregated reading. A rule fires once when its condition becomes true and re-arms when it clears.</div>
+      </div>
+      <div class="card"><h2>Your rules</h2><ul class="list" id="r-list"><li class="empty">No rules yet.</li></ul></div>
+    </div>
+    <div class="grid2b">
+      <div class="card">
+        <h2>Alert history <select id="h-level" class="inline"><option value="">All levels</option><option>critical</option><option>warning</option><option>predicted</option><option>info</option></select></h2>
+        <ul class="feed tall" id="h-list"><li class="empty">No alerts yet.</li></ul>
+      </div>
+      <div class="card">
+        <h2>Notification log</h2>
+        <ul class="feed tall" id="n-list"><li class="empty">No notifications yet.</li></ul>
+        <div class="hint">Email and SMS are simulated and logged. Telegram is delivered for real when a bot token is configured.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= OPERATIONS ================= -->
+  <section class="page" id="page-ops">
+    <div class="grid2b">
+      <div class="card"><h2>Service health</h2><div id="o-health"></div></div>
+      <div class="card"><h2>Message throughput (last 3 minutes)</h2>
+        <div class="legend"><span><i style="background:#22d3ee"></i>raw sensor msgs/s</span><span><i style="background:#fb923c"></i>aggregated msgs/s to cloud</span></div>
+        <canvas id="ochart" class="midchart"></canvas>
+        <div class="hint">The gap between the two lines is the traffic removed by the fog nodes.</div></div>
+    </div>
+    <div class="grid2b">
+      <div class="card"><h2>Kafka</h2><div id="o-kafka"><div class="empty">Loading...</div></div></div>
+      <div class="card"><h2>Stream processor load</h2><div id="o-procs"></div>
+        <div class="hint">Scale the cloud tier live: <code>docker-compose up -d --scale processor=3</code>. Kafka splits the 3 partitions between the processors.</div></div>
+    </div>
+    <div class="card">
+      <h2>Data pipeline</h2>
+      <div class="pipeline">
+        <div class="pn edge">Edge<small>36 simulated sensors</small></div><div class="pa">MQTT</div>
+        <div class="pn fog">Fog (3 nodes)<small>aggregate + classify</small></div><div class="pa">Kafka</div>
+        <div class="pn cloud">Processors<small>history, rules, state</small></div><div class="pa">Kafka</div>
+        <div class="pn cloud">Predictor + Notifier<small>forecast, alerts</small></div><div class="pa">Redis / WS</div>
+        <div class="pn">Dashboard</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="core.js"></script>
+<script src="overview.js"></script>
+<script src="analytics.js"></script>
+<script src="map.js"></script>
+<script src="rules.js"></script>
+<script src="ops.js"></script>
+<script>App.start();</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Login | CityPulse</title><link rel="stylesheet" href="login.css">
+</head>
+<body>
+<main class="login-shell">
+  <section class="login-visual">
+    <div class="brand"><div class="logo">CP</div><div><h1>CityPulse</h1><p>Intelligent City Operations Platform</p></div></div>
+    <div class="visual-copy"><span class="eyebrow">EDGE · FOG · CLOUD</span><h2>One view.<br><em>Every city signal.</em></h2><p>Monitor live infrastructure, understand emerging incidents and keep your city operations connected.</p></div>
+    <div class="pipeline"><span>EDGE SENSORS</span><i></i><span>FOG NODES</span><i></i><span>CLOUD</span></div>
+    <div class="visual-foot"><span class="pulse"></span> CityPulse monitoring platform</div>
+  </section>
+  <section class="login-panel">
+    <div class="login-card">
+      <div class="mobile-brand"><div class="logo">CP</div><strong>CityPulse</strong></div>
+      <div class="eyebrow">ADMINISTRATOR ACCESS</div>
+      <h2>Welcome back</h2><p class="intro">Sign in to access your city operations dashboard.</p>
+      <form id="login-form">
+        <label for="username">Username</label><input id="username" name="username" autocomplete="username" placeholder="Enter admin username" required value="admin">
+        <label for="password">Password</label><div class="password-wrap"><input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required><button id="toggle-password" type="button" aria-label="Show password">Show</button></div>
+        <div class="error" id="login-error" role="alert"></div>
+        <button class="submit" id="submit-btn" type="submit"><span>Sign in to CityPulse</span><b>→</b></button>
+      </form>
+      <div class="secure-note"><span>◆</span> Secure administrator session · JWT authentication</div>
+      <div class="login-bottom">CityPulse <span>•</span> Real-time smart city monitoring</div>
+    </div>
+  </section>
+</main>
+<script src="login.js"></script>
+</body></html>
